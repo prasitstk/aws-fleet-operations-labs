@@ -1,0 +1,128 @@
+#!/bin/bash
+# -----------------------------------------------------------------------------
+# Lab 06: Fleet Manager — Node bootstrap
+# Installs CloudWatch Agent, deploys financial collector, creates systemd service.
+# Runs at EC2 boot time. Instances are in a public subnet with internet access.
+# -----------------------------------------------------------------------------
+
+set -euo pipefail
+
+CW_AGENT_CONFIG_PARAM="${cw_agent_config_param}"
+AWS_REGION="${aws_region}"
+APP_PORT="${app_port}"
+PROJECT_NAME="${project_name}"
+
+echo "=== Fleet Node Bootstrap Starting ==="
+
+# --- 1. Install CloudWatch Agent ---
+echo "=== Installing CloudWatch Agent ==="
+dnf install -y amazon-cloudwatch-agent
+
+# --- 2. Fetch CW Agent config from SSM Parameter Store and start agent ---
+echo "=== Configuring CloudWatch Agent from SSM Parameter: $CW_AGENT_CONFIG_PARAM ==="
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -s \
+  -c "ssm:$CW_AGENT_CONFIG_PARAM"
+
+echo "=== CloudWatch Agent started ==="
+
+# --- 3. Install Python3 (AL2023 has it, but ensure pip is available) ---
+echo "=== Ensuring Python3 and pip ==="
+dnf install -y python3 python3-pip
+
+# --- 4. Create application directories ---
+mkdir -p /opt/financial-collector
+mkdir -p /var/log/financial-collector
+
+# --- 5. Write the financial collector application ---
+echo "=== Writing financial collector app ==="
+cat > /opt/financial-collector/app.py << 'PYEOF'
+import http.server
+import json
+import random
+import time
+import logging
+import os
+
+logging.basicConfig(
+    filename='/var/log/financial-collector/app.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+
+START_TIME = time.time()
+PORT = int(os.environ.get('APP_PORT', '8080'))
+
+class MetricsHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/metrics':
+            metrics = {
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                'stock_prices': {
+                    'AAPL': round(random.uniform(170, 195), 2),
+                    'GOOGL': round(random.uniform(140, 165), 2),
+                    'MSFT': round(random.uniform(380, 420), 2),
+                    'AMZN': round(random.uniform(175, 195), 2),
+                },
+                'portfolio_value': round(random.uniform(95000, 105000), 2),
+                'trade_volume': random.randint(1000, 5000),
+                'market_status': 'open' if random.random() > 0.3 else 'closed',
+            }
+            self._respond(200, metrics)
+            logging.info('Served /metrics request')
+        elif self.path == '/health':
+            health = {
+                'status': 'healthy',
+                'uptime_seconds': round(time.time() - START_TIME, 1),
+                'version': '1.0.0',
+            }
+            self._respond(200, health)
+        else:
+            self._respond(404, {'error': 'Not found'})
+
+    def _respond(self, code, data):
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data, indent=2).encode())
+
+    def log_message(self, format, *args):
+        logging.info(format % args)
+
+if __name__ == '__main__':
+    server = http.server.HTTPServer(('0.0.0.0', PORT), MetricsHandler)
+    logging.info(f'Financial collector starting on port {PORT}')
+    print(f'Serving on port {PORT}')
+    server.serve_forever()
+PYEOF
+
+chmod +x /opt/financial-collector/app.py
+
+# --- 6. Create systemd service ---
+echo "=== Creating systemd service ==="
+cat > /etc/systemd/system/financial-collector.service << SVCEOF
+[Unit]
+Description=Financial Metrics Collector
+After=network.target
+
+[Service]
+Type=simple
+Environment=APP_PORT=$APP_PORT
+ExecStart=/usr/bin/python3 /opt/financial-collector/app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+systemctl daemon-reload
+systemctl enable financial-collector
+systemctl start financial-collector
+
+echo "=== Financial Collector service started on port $APP_PORT ==="
+echo "=== Fleet Node Bootstrap Complete ==="

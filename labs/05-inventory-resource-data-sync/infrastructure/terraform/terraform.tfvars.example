@@ -1,0 +1,27 @@
+aws_region          = "us-east-1"
+project_name        = "ssm-inventory-lab"
+environment         = "dev"
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
+
+# Instance types
+linux_instance_type   = "t2.micro"
+windows_instance_type = "t3.micro"
+
+# Inventory schedule (minimum: rate(30 minutes))
+inventory_schedule        = "rate(30 minutes)"
+custom_inventory_schedule = "rate(1 hour)"
+
+# S3 bucket (leave empty to auto-generate from project name + account ID)
+inventory_bucket_prefix = ""
+
+# Inventory data lifecycle
+inventory_data_expiration_days = 90
+
+# Email for SNS notifications (leave empty to skip subscription)
+notification_email = ""
+
+# Custom inventory metadata
+custom_app_name    = "inventory-lab-app"
+custom_app_version = "1.0.0"

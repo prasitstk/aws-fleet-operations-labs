@@ -1,0 +1,33 @@
+aws_region          = "us-east-1"
+project_name        = "ssm-patch-manager"
+environment         = "dev"
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
+instance_type       = "t2.micro"
+instance_count      = 2
+
+# AMI filter — use "al2023-ami-2023.0.*-x86_64" for an older AMI to see more patches
+ami_name_filter = "al2023-ami-2023.*-x86_64"
+
+# Patch group — case-sensitive, must match the EC2 tag value exactly
+patch_group_name = "LinuxPatchGroup"
+
+# Approval delays (days) — Critical/Important vs Medium/Low
+patch_baseline_approval_days_critical = 7
+patch_baseline_approval_days_other    = 14
+
+# Maintenance window schedule
+maintenance_window_schedule = "rate(24 hours)"
+maintenance_window_duration = 1
+maintenance_window_cutoff   = 0
+
+# Patch operation: "Scan" (compliance check only) or "Install" (scan + apply)
+patch_operation = "Install"
+
+# Email for SNS notifications (leave empty to skip subscription)
+notification_email = ""
+
+# S3 bucket name for patch logs (leave empty for auto-generated name)
+patch_log_bucket_prefix  = ""
+patch_log_expiration_days = 90

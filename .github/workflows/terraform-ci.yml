@@ -1,0 +1,56 @@
+name: Terraform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-modules:
+    name: Validate Modules
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - shared/modules/ssm-vpc
+          - shared/modules/ssm-instance-profile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+      - name: Terraform Init
+        run: terraform -chdir=${{ matrix.module }} init -backend=false
+      - name: Terraform Format
+        run: terraform -chdir=${{ matrix.module }} fmt -check
+      - name: Terraform Validate
+        run: terraform -chdir=${{ matrix.module }} validate
+
+  validate-labs:
+    name: Validate Labs
+    runs-on: ubuntu-latest
+    needs: validate-modules
+    strategy:
+      fail-fast: false
+      matrix:
+        lab:
+          - labs/01-automation-runbook-ec2-provisioning/infrastructure/terraform
+          - labs/02-patch-manager-compliance-baseline/infrastructure/terraform
+          - labs/03-session-manager-bastion-replacement/infrastructure/terraform
+          - labs/04-parameter-store-event-driven-config/infrastructure/terraform
+          - labs/05-inventory-resource-data-sync/infrastructure/terraform
+          - labs/06-fleet-manager-node-management/infrastructure/terraform
+          - labs/07-bedrock-session-log-analysis/infrastructure/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+      - name: Terraform Init
+        run: terraform -chdir=${{ matrix.lab }} init -backend=false
+      - name: Terraform Format
+        run: terraform -chdir=${{ matrix.lab }} fmt -check
+      - name: Terraform Validate
+        run: terraform -chdir=${{ matrix.lab }} validate

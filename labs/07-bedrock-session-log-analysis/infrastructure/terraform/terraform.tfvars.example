@@ -1,0 +1,25 @@
+aws_region          = "us-east-1"
+project_name        = "bedrock-session-log-analysis"
+environment         = "dev"
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
+instance_type       = "t3.micro"
+
+# Email for SNS analysis notifications (leave empty to skip subscription)
+notification_email = ""
+
+# Bedrock model (cross-region inference profile — auto-enabled for serverless models)
+bedrock_model_id = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+# Lambda settings
+lambda_timeout     = 150
+lambda_memory_size = 256
+
+# SSM Session Document — set false if Lab 03 is deployed (account-level singleton)
+create_session_document = true
+
+# S3 session log settings
+# session_log_bucket_prefix = ""  # Auto-generated from project_name + account ID if empty
+session_log_expiration_days   = 90
+cloudwatch_log_retention_days = 30
