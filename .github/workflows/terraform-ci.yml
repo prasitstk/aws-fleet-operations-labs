@@ -17,8 +17,8 @@ jobs:
           - shared/modules/ssm-vpc
           - shared/modules/ssm-instance-profile
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.5"
       - name: Terraform Init
@@ -44,8 +44,8 @@ jobs:
           - labs/06-fleet-manager-node-management/infrastructure/terraform
           - labs/07-bedrock-session-log-analysis/infrastructure/terraform
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.5"
       - name: Terraform Init
